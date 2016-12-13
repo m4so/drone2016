@@ -1,0 +1,28 @@
+private void sendRawChannels(int ch1, int ch2, int ch3, int ch4)
+{
+	byte[] buffer = new byte[11];
+
+	//Header
+	buffer[0] = 85;
+	buffer[1] = 0;
+	buffer[2] = 11;
+	buffer[3] = 0;
+
+	//Channels
+	buffer[4] = (byte)(ch1 & 255);
+	buffer[5] = (byte)(ch2 & 255);
+	buffer[6] = (byte)(ch3 & 255);
+	buffer[7] = (byte)(ch4 & 255);
+
+	buffer[8] = 0;
+	buffer[9] = 0;
+
+	int sum = 0;
+	for(int i = 0; i < 9;i++)
+		sum += (int)buffer[i];
+  
+	buffer[10] = (byte)(sum % 256);
+ 
+	sock.Client.Send(buffer);
+	
+}

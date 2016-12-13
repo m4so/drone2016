@@ -1,0 +1,109 @@
+Global null$, header$
+null$ = chr$(0)
+header$ = chr$(85) + chr$(0) + chr$(11) + chr$(0)
+Attempt$="Attempting to connect........"
+Connect$="Connected"
+NotConnect$="Not connected"
+
+Graphics On
+Orientation 2
+SetScale 480, 854
+TextSize 40
+Color 50,50,50
+TextColor 100,100,100
+
+'SETUP THE SCREEN
+'button position variables
+	dim px(4)=0,240,240,240,240
+	dim py(4)=0,100,300,500,700
+	
+'draw buttons as red circles
+CLS
+color 100,0,0
+For c= 1 to 4
+	Circle  px(c),py(c),20,1
+Next c
+color 50,50,50
+
+'Set channel values at midpoint on startup, but not after lost connection, so do it here
+	ch1=50
+	ch2=50
+	ch3=50
+	ch4=50
+
+'               ****** MAIN LOOPS ******
+do
+
+  Drawtext Attempt$, 430,50,90,1
+  wait 100
+  TcpOpen 1, "10.10.100.254", 8899, "c", 12000, 1000
+
+    if TcpGetState(1) = 1 then
+
+	Drawtext Connect$,360,50,90,1
+      	wait 1000
+
+	do while TcpGetState(1) = 1
+
+		'Main Loop....check for screen touch, update and keep sending channel values
+
+		Touch x,y,10  ' This is milliseconds. If screen not touched, x and y are both -1
+
+			If y<200 and y>-1 then
+				px(1)=x
+				ch1= Int(x/4.8)
+			ElseIf y>200 and y<400 then
+				px(2)=x
+				ch2= Int(x/4.8)
+			ElseIf y>400 and y<600 then
+				px(3)=x
+				ch3= Int(x/4.8)
+			ElseIf y>600 and y<800 then
+				px(4)=x
+				ch4= Int(x/4.8)
+			Endif
+
+		'draw new button positions	 and get rid of messages, if any
+			CLS
+			color 100,0,0
+			For c= 1 to 4
+				Circle  px(c),py(c),20,1 
+			Next c
+			color 50,50,50
+			sendRawChannels(ch1, ch2, ch3, ch4)
+	loop
+   endif
+
+  Drawtext NotConnect$,300,50,90,1
+  SetClipboard TcpGetError$(1)  'store the error message on the clipboard
+  wait 1
+  TcpClose 1
+
+loop
+end
+
+Sub sendRawChannels(ch1, ch2, ch3, ch4)
+  ' Add header
+  packet$ = header$
+
+  ' Add channel values
+  packet$ = packet$ + chr$(ch1 & 255)  
+  packet$ = packet$ + chr$(ch2 & 255)  
+  packet$ = packet$ + chr$(ch3 & 255)  
+  packet$ = packet$ + chr$(ch4 & 255)  
+
+  ' Two bytes not used
+  packet$ = packet$ + null$  
+  packet$ = packet$ + null$  
+
+  sum = 0
+  for i = 1 to 10
+    sum = sum + ascii(mid$(packet$, i, 1))
+  next
+
+  ' Add checksum byte
+  packet$ = packet$ + chr$(sum % 256)
+
+  TcpWrite 1, packet$
+
+End Sub
